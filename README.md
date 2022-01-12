@@ -24,7 +24,8 @@ val now = ZonedDateTime.now.toEpochSecond
 
 val effectToBeRateLimited: IO[String] = ???
 
-val result: IO[String] = rateLimited[IO, String](key = userId, maxTokens = 5, timeWindowInSec = 5, nowInEpochSec = now)(effectToBeRateLimited)
+val result: IO[String] = rateLimited[IO, String](key = userId, maxTokens = 5,
+    timeWindowInSec = 5, nowInEpochSec = now)(effectToBeRateLimited)
 
 result.handleErrorWith {
     case RedisConnectionError(msg) => ??? 
