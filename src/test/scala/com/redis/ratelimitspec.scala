@@ -1,4 +1,4 @@
-package redis
+package com.redis
 
 import org.scalatest.flatspec.AnyFlatSpec
 import com.dimafeng.testcontainers.GenericContainer
@@ -23,61 +23,66 @@ class HelloSpec extends AnyFlatSpec {
     redisContainer.stop()
   }
 
-  "rateLimited" should "not rate limit" in withRedisPort {redisPort =>
+  "rateLimited" should "not rate limit" in withRedisPort { redisPort =>
     implicit val redisClient = new RedisClient("localhost", redisPort)
-    import redis.ratelimit._
+    import com.redis.ratelimit._
     val effect = IO.pure("foo")
     val rateLimitedCall = rateLimited[IO, String](
-        keyPrefix = "my_prefix",
-        threshold = 40,
-        windowInSec = 10,
-        nowInEpochSec = ZonedDateTime.now.toEpochSecond
-      )(effect)
+      keyPrefix = "my_prefix",
+      threshold = 40,
+      windowInSec = 10,
+      nowInEpochSec = ZonedDateTime.now.toEpochSecond
+    )(effect)
     val result = rateLimitedCall.attempt
 
     result.unsafeRunSync() match {
-        case Left(th) => fail(th)
-        case Right(value) => assert(value == "foo")
+      case Left(th)     => fail(th)
+      case Right(value) => assert(value == "foo")
     }
   }
 
   "rateLimited" should "rate limit" in withRedisPort { redisPort =>
     implicit val redisClient = new RedisClient("localhost", redisPort)
-    import redis.ratelimit._
+    import com.redis.ratelimit._
     val effect = IO.pure("foo")
     val rateLimitedCall = rateLimited[IO, String](
-        keyPrefix = "my_prefix",
-        threshold = 40,
-        windowInSec = 10,
-        nowInEpochSec = ZonedDateTime.now.toEpochSecond
-      )(effect)
+      keyPrefix = "my_prefix",
+      threshold = 40,
+      windowInSec = 10,
+      nowInEpochSec = ZonedDateTime.now.toEpochSecond
+    )(effect)
     val result = (for {
       _ <- rateLimitedCall.replicateA(40)
       r <- rateLimitedCall
     } yield r).attempt
 
     result.unsafeRunSync() match {
-        case Left(th) => assert(th == RateLimitExceeded)
-        case Right(value) => fail("Rate limited should have exceeded")
+      case Left(th)     => assert(th == RateLimitExceeded)
+      case Right(value) => fail("Rate limited should have exceeded")
     }
   }
 
-  "rateLimited" should "fail with RedisConnectionError" in withRedisPort {_ =>
-      val badPort = 2342
+  "rateLimited" should "fail with RedisConnectionError" in withRedisPort { _ =>
+    val badPort = 2342
     implicit val redisClient = new RedisClient("localhost", badPort)
-    import redis.ratelimit._
+    import com.redis.ratelimit._
     val effect = IO.pure("foo")
     val rateLimitedCall = rateLimited[IO, String](
-        keyPrefix = "my_prefix",
-        threshold = 40,
-        windowInSec = 10,
-        nowInEpochSec = ZonedDateTime.now.toEpochSecond
-      )(effect)
+      keyPrefix = "my_prefix",
+      threshold = 40,
+      windowInSec = 10,
+      nowInEpochSec = ZonedDateTime.now.toEpochSecond
+    )(effect)
     val result = rateLimitedCall.attempt
 
     result.unsafeRunSync() match {
-        case Left(th) => assert(th == RedisConnectionError("java.net.ConnectException: Connection refused (Connection refused)"))
-        case Right(value) => fail("Should be RedisConnectionError")
-    }      
+      case Left(th) =>
+        assert(
+          th == RedisConnectionError(
+            "java.net.ConnectException: Connection refused (Connection refused)"
+          )
+        )
+      case Right(value) => fail("Should be RedisConnectionError")
+    }
   }
 }

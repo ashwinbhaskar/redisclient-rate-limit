@@ -33,13 +33,4 @@ object Dependencies {
       "com.dimafeng" %% "testcontainers-scala-scalatest" % V.testcontainersScalaVersion % Test
     val scalaTest = "org.scalatest" %% "scalatest" % V.scalaTest % Test
   }
-
-  object C { // Compiler plugins
-    val betterMonadicFor = compilerPlugin(
-      "com.olegpy" %% "better-monadic-for" % V.betterMonadicFor
-    )
-    val kindProjector = compilerPlugin(
-      "org.typelevel" %% "kind-projector" % V.kindProjector cross CrossVersion.full
-    )
-  }
 }

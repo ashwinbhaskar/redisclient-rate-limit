@@ -1,4 +1,4 @@
-package redis
+package com.redis
 
 import cats.effect.kernel.Sync
 import cats.implicits._
