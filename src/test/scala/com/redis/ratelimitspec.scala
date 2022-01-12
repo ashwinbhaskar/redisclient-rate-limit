@@ -51,8 +51,9 @@ class RateLimitSpec extends AnyFlatSpec {
       windowInSec = 10,
       nowInEpochSec = ZonedDateTime.now.toEpochSecond
     )(effect)
+    
     val result = (for {
-      _ <- rateLimitedCall.replicateA(40)
+      l <- rateLimitedCall.attempt.replicateA(40)
       r <- rateLimitedCall
     } yield r).attempt
 

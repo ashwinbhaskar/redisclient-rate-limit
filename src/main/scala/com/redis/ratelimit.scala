@@ -12,6 +12,7 @@ package object ratelimit {
   private val counterSuffix = ":rate_limit_counter"
   private val luaCode =
     """
+      -- ARGUMENTS IN ORDER - CurrentTimeStamp, WindowLength(in sec), LastUpdatedTimeStampKey, CounterKey, ThresholdValue
       local current_ts_string = ARGV[1]
       local current_ts = tonumber(current_ts_string)
       local window = tonumber(ARGV[2])
@@ -26,7 +27,7 @@ package object ratelimit {
       if((current_ts - last_ts) > window)
       then
           redis.call("SET", ARGV[4], ARGV[5])
-          redis.call("SET", ARGV[2], current_ts_string)
+          redis.call("SET", ARGV[3], current_ts_string)
       end
 
       return redis.call("DECR", ARGV[4])
@@ -59,11 +60,7 @@ package object ratelimit {
         .handleErrorWith { case e: Exception =>
           F.raiseError(RedisConnectionError(e.getMessage))
         }
-      _ <-
-        if (count <= 0)
-          F.raiseError[Unit](RateLimitExceeded)
-        else
-          F.unit
+      _ <- F.unlessA(count > 0)(F.raiseError[Unit](RateLimitExceeded))
       _ <- F.blocking(redisClient.set(lastResetTimeKey, nowInEpochSec))
       a <- fa
     } yield a
