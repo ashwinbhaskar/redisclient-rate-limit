@@ -4,8 +4,6 @@ object Dependencies {
   object V { // Versions
     // Scala
 
-    val logback = "1.2.6"
-    val scalaLogging = "3.9.4"
     val redisClient = "3.41"
     val catsEffect = "3.3.4"
 
@@ -20,9 +18,6 @@ object Dependencies {
 
   object L { // Libraries
     // Scala
-    val logback = "ch.qos.logback" % "logback-classic" % V.logback
-    val scalaLogging =
-      "com.typesafe.scala-logging" %% "scala-logging" % V.scalaLogging
     val redisClient = "net.debasishg" %% "redisclient" % V.redisClient
     val catsEffect = "org.typelevel" %% "cats-effect" % V.catsEffect
   }

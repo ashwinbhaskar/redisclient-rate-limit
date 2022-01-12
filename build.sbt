@@ -11,8 +11,6 @@ lazy val root = (project in file("."))
     scalacOptions ~= (_.filterNot(Set("-Xfatal-warnings"))),
     libraryDependencies ++= Seq(
       L.redisClient,
-      L.scalaLogging,
-      L.logback,
       L.catsEffect,
       T.scalaTest,
       T.testContainer
