@@ -30,8 +30,7 @@ class RateLimitSpec extends AnyFlatSpec {
     val rateLimitedCall = rateLimited[IO, String](
       key = "my_prefix",
       maxTokens = 40,
-      timeWindowInSec = 10,
-      nowInEpochSec = ZonedDateTime.now.toEpochSecond
+      timeWindowInSec = 10
     )(effect)
     val result = rateLimitedCall.attempt
 
@@ -48,10 +47,9 @@ class RateLimitSpec extends AnyFlatSpec {
     val rateLimitedCall = rateLimited[IO, String](
       key = "my_prefix",
       maxTokens = 40,
-      timeWindowInSec = 10,
-      nowInEpochSec = ZonedDateTime.now.toEpochSecond
+      timeWindowInSec = 10
     )(effect)
-    
+
     val result = (for {
       l <- rateLimitedCall.attempt.replicateA(40)
       r <- rateLimitedCall
@@ -71,8 +69,7 @@ class RateLimitSpec extends AnyFlatSpec {
     val rateLimitedCall = rateLimited[IO, String](
       key = "my_prefix",
       maxTokens = 40,
-      timeWindowInSec = 10,
-      nowInEpochSec = ZonedDateTime.now.toEpochSecond
+      timeWindowInSec = 10
     )(effect)
     val result = rateLimitedCall.attempt
 

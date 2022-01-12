@@ -15,7 +15,7 @@ import com.redis.RedisClient //From scala-redis library
 import com.redis.ratelimit._ //This library
 import cats.effect.IO
 
-// Scenario: Don't allow more than 5 requests per user per 5 seconds
+// Example Scenario: Don't allow more than 5 requests per user per 5 seconds
 val host: String = ???
 val port: Int = ???
 implicit val redisClient: RedisClient = new RedisClient(host, port)
@@ -25,7 +25,7 @@ val now = ZonedDateTime.now.toEpochSecond
 val effectToBeRateLimited: IO[String] = ???
 
 val result: IO[String] = rateLimited[IO, String](key = userId, maxTokens = 5,
-    timeWindowInSec = 5, nowInEpochSec = now)(effectToBeRateLimited)
+    timeWindowInSec = 5)(effectToBeRateLimited)
 
 result.handleErrorWith {
     case RedisConnectionError(msg) => ??? 

@@ -1,5 +1,6 @@
 package com.redis
 
+import java.time.ZonedDateTime
 import cats.effect.kernel.Sync
 import cats.implicits._
 import com.redis.RedisClient
@@ -36,13 +37,13 @@ package object ratelimit {
   def rateLimited[F[_], A](
       key: String,
       maxTokens: Long,
-      timeWindowInSec: Long,
-      nowInEpochSec: Long
+      timeWindowInSec: Long
   )(fa: F[A])(implicit redisClient: RedisClient, F: Sync[F]): F[A] = {
     val lastResetTimeKey = key ++ lastResetTimeSuffix
     val counterKey = key ++ counterSuffix
     for {
-      count <- F
+      nowInEpochSec <- F.delay(ZonedDateTime.now.toEpochSecond)
+      remainingTokens <- F
         .blocking(
           redisClient.evalInt(
             luaCode,
@@ -60,7 +61,7 @@ package object ratelimit {
         .handleErrorWith { case e: Exception =>
           F.raiseError(RedisConnectionError(e.getMessage))
         }
-      _ <- F.unlessA(count > 0)(F.raiseError[Unit](RateLimitExceeded))
+      _ <- F.unlessA(remainingTokens > 0)(F.raiseError[Unit](RateLimitExceeded))
       _ <- F.blocking(redisClient.set(lastResetTimeKey, nowInEpochSec))
       a <- fa
     } yield a
