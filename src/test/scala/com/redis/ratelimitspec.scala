@@ -11,7 +11,7 @@ import java.time.ZonedDateTime
 import org.scalatest.freespec.AsyncFreeSpec
 import org.scalatest.matchers.should.Matchers
 
-class HelloSpec extends AnyFlatSpec {
+class RateLimitSpec extends AnyFlatSpec {
 
   private def withRedisPort(f: Int => Any) = {
     val redisContainer =
