@@ -61,7 +61,9 @@ package object ratelimit {
         .handleErrorWith { case e: Exception =>
           F.raiseError(RedisConnectionError(e.getMessage))
         }
-      _ <- F.unlessA(remainingTokens > 0)(F.raiseError[Unit](RateLimitExceeded))
+      _ <- F.unlessA(remainingTokens >= 0)(
+        F.raiseError[Unit](RateLimitExceeded)
+      )
       _ <- F.blocking(redisClient.set(lastResetTimeKey, nowInEpochSec))
       a <- fa
     } yield a
