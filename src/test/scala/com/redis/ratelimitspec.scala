@@ -28,9 +28,9 @@ class RateLimitSpec extends AnyFlatSpec {
     import com.redis.ratelimit._
     val effect = IO.pure("foo")
     val rateLimitedCall = rateLimited[IO, String](
-      keyPrefix = "my_prefix",
-      threshold = 40,
-      windowInSec = 10,
+      key = "my_prefix",
+      maxTokens = 40,
+      timeWindowInSec = 10,
       nowInEpochSec = ZonedDateTime.now.toEpochSecond
     )(effect)
     val result = rateLimitedCall.attempt
@@ -46,9 +46,9 @@ class RateLimitSpec extends AnyFlatSpec {
     import com.redis.ratelimit._
     val effect = IO.pure("foo")
     val rateLimitedCall = rateLimited[IO, String](
-      keyPrefix = "my_prefix",
-      threshold = 40,
-      windowInSec = 10,
+      key = "my_prefix",
+      maxTokens = 40,
+      timeWindowInSec = 10,
       nowInEpochSec = ZonedDateTime.now.toEpochSecond
     )(effect)
     
@@ -69,9 +69,9 @@ class RateLimitSpec extends AnyFlatSpec {
     import com.redis.ratelimit._
     val effect = IO.pure("foo")
     val rateLimitedCall = rateLimited[IO, String](
-      keyPrefix = "my_prefix",
-      threshold = 40,
-      windowInSec = 10,
+      key = "my_prefix",
+      maxTokens = 40,
+      timeWindowInSec = 10,
       nowInEpochSec = ZonedDateTime.now.toEpochSecond
     )(effect)
     val result = rateLimitedCall.attempt

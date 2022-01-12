@@ -34,13 +34,13 @@ package object ratelimit {
     """
 
   def rateLimited[F[_], A](
-      keyPrefix: String,
-      threshold: Long,
-      windowInSec: Long,
+      key: String,
+      maxTokens: Long,
+      timeWindowInSec: Long,
       nowInEpochSec: Long
   )(fa: F[A])(implicit redisClient: RedisClient, F: Sync[F]): F[A] = {
-    val lastResetTimeKey = keyPrefix ++ lastResetTimeSuffix
-    val counterKey = keyPrefix ++ counterSuffix
+    val lastResetTimeKey = key ++ lastResetTimeSuffix
+    val counterKey = key ++ counterSuffix
     for {
       count <- F
         .blocking(
@@ -49,10 +49,10 @@ package object ratelimit {
             List.empty,
             List(
               nowInEpochSec,
-              windowInSec,
+              timeWindowInSec,
               lastResetTimeKey,
               counterKey,
-              threshold
+              maxTokens
             )
           )
         )
