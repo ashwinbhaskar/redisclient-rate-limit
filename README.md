@@ -1,5 +1,5 @@
 # Redis Rate Limit
-A cats friendly lightweight library that takes care of rate limiting using token bucket algorithm. This library requires [scala-redis](https://github.com/debasishg/scala-redis).
+A cats friendly and lightweight library that does rate limiting using token bucket algorithm. The library executes the redis commands as `Lua` code which makes the operations atomic.  This library requires [scala-redis](https://github.com/debasishg/scala-redis).
 
 ## Importing
 Add the following to your `build.sbt`
