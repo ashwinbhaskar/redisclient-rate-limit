@@ -29,11 +29,11 @@ class RateLimitSpec extends AnyFlatSpec {
     implicit val redisClient = new RedisClient("localhost", redisPort)
     import com.redis.ratelimit._
     val effect = IO.pure("foo")
-    val rateLimitedCall = rateLimited[IO, String](
+    val rateLimitedCall = rateLimited[IO, String](effect)(
       key = "user_id_1",
       maxTokens = 40,
       timeWindowInSec = 10
-    )(effect)
+    )
     val result = rateLimitedCall.attempt
 
     result.unsafeRunSync() match {
@@ -46,11 +46,11 @@ class RateLimitSpec extends AnyFlatSpec {
     implicit val redisClient = new RedisClient("localhost", redisPort)
     import com.redis.ratelimit._
     val effect = IO.pure("foo")
-    val rateLimitedCall = rateLimited[IO, String](
+    val rateLimitedCall = rateLimited[IO, String](effect)(
       key = "user_id_2",
       maxTokens = 40,
       timeWindowInSec = 10
-    )(effect)
+    )
 
     val result = (for {
       l <- rateLimitedCall.attempt.replicateA(40)
@@ -68,11 +68,11 @@ class RateLimitSpec extends AnyFlatSpec {
       implicit val redisClient = new RedisClient("localhost", redisPort)
       import com.redis.ratelimit._
       val effect = IO.pure("foo")
-      val rateLimitedCall = rateLimited[IO, String](
+      val rateLimitedCall = rateLimited[IO, String](effect)(
         key = "user_id_3",
         maxTokens = 10,
         timeWindowInSec = 4
-      )(effect)
+      )
 
       val result1 = (for {
         l <- rateLimitedCall.attempt.replicateA(10)
@@ -100,11 +100,11 @@ class RateLimitSpec extends AnyFlatSpec {
       implicit val redisClient = new RedisClient("localhost", redisPort)
       import com.redis.ratelimit._
       val effect = IO.pure("foo")
-      val rateLimitedCall = rateLimited[IO, String](
+      val rateLimitedCall = rateLimited[IO, String](effect)(
         key = "user_id_4",
         maxTokens = 6,
         timeWindowInSec = 5
-      )(effect)
+      )
 
       val result1 = (for {
         _ <- rateLimitedCall
@@ -140,11 +140,11 @@ class RateLimitSpec extends AnyFlatSpec {
     implicit val redisClient = new RedisClient("localhost", badPort)
     import com.redis.ratelimit._
     val effect = IO.pure("foo")
-    val rateLimitedCall = rateLimited[IO, String](
+    val rateLimitedCall = rateLimited[IO, String](effect)(
       key = "user_id_5",
       maxTokens = 40,
       timeWindowInSec = 10
-    )(effect)
+    )
     val result = rateLimitedCall.attempt
 
     result.unsafeRunSync() match {

@@ -34,11 +34,11 @@ package object ratelimit {
       return redis.call("DECR", ARGV[4])
     """
 
-  def rateLimited[F[_], A](
+  def rateLimited[F[_], A](fa: F[A])(
       key: String,
       maxTokens: Long,
       timeWindowInSec: Long
-  )(fa: F[A])(implicit redisClient: RedisClient, F: Sync[F]): F[A] = {
+  )(implicit redisClient: RedisClient, F: Sync[F]): F[A] = {
     val lastResetTimeKey = key ++ lastResetTimeSuffix
     val counterKey = key ++ counterSuffix
     for {
