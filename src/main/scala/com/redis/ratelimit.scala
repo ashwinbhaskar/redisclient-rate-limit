@@ -1,14 +1,38 @@
 package com.redis
 
+import scala.collection.mutable
 import java.time.ZonedDateTime
 import cats.effect.kernel.Sync
 import cats.implicits._
 import com.redis.RedisClient
+import scala.ref.WeakReference
 
 package object ratelimit {
   sealed trait RedisRateLimitError extends Exception
   case class RedisConnectionError(msg: String) extends RedisRateLimitError
   object RateLimitExceeded extends RedisRateLimitError
+  case class Config(
+      host: String,
+      port: Int,
+      maxTokens: Long,
+      timeWindowInSec: Long
+  )
+  private val clients: mutable.Map[Config, WeakReference[RedisClient]] =
+    mutable.Map.empty
+
+  private def getOrCreateAndUpdate(config: Config): RedisClient = {
+    val weakClient = clients.getOrElseUpdate(
+      config,
+      WeakReference(new RedisClient(config.host, config.port))
+    )
+    weakClient.get match {
+      case Some(client) => client
+      case None =>
+        val newClient = new RedisClient(config.host, config.port)
+        clients.update(config, WeakReference(newClient))
+        newClient
+    }
+  }
   private val lastResetTimeSuffix = ":rate_limit_last_reset"
   private val counterSuffix = ":rate_limit_counter"
   private val luaCode =
@@ -34,7 +58,18 @@ package object ratelimit {
       return redis.call("DECR", ARGV[4])
     """
 
-  def rateLimited[F[_], A](fa: F[A])(
+  def rateLimited[F[_], A](fa: F[A], key: String)(implicit
+      config: Config,
+      F: Sync[F]
+  ): F[A] =
+    F.delay(
+      getOrCreateAndUpdate(config)
+    ).flatMap(implicit client =>
+      rateLimited(fa, key, config.maxTokens, config.timeWindowInSec)
+    )
+
+  def rateLimited[F[_], A](
+      fa: F[A],
       key: String,
       maxTokens: Long,
       timeWindowInSec: Long
