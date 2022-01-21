@@ -20,7 +20,7 @@ publishTo := Some(
 )
 
 ThisBuild / scalaVersion     := "2.13.7"
-ThisBuild / version          := "1.0.0"
+ThisBuild / version          := "2.0.0"
 ThisBuild / organization     := "io.github.ashwinbhaskar"
 ThisBuild / organizationName := "redis.ratelimit"
 
