@@ -1,4 +1,4 @@
-# Redis Rate Limit ![build](https://github.com/github/docs/actions/workflows/main.yml/badge.svg)
+# Redis Rate Limit ![build](https://github.com/ashwinbhaskar/redisclient-rate-limit/actions/workflows/scala.yml/badge.svg)
 A cats friendly and lightweight library that does rate limiting using token bucket algorithm. The library executes the redis commands as `Lua` code which makes the operations atomic. This execution happens in a blocking effect (`Sync[F].blocking`).  The library internally uses [scala-redis](https://github.com/debasishg/scala-redis) when redis client is not provided
 
 ## Importing
