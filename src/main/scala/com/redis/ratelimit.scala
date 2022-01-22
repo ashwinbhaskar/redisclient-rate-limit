@@ -5,7 +5,6 @@ import java.time.ZonedDateTime
 import cats.effect.kernel.Sync
 import cats.implicits._
 import com.redis.RedisClient
-import scala.ref.WeakReference
 
 package object ratelimit {
   sealed trait RedisRateLimitError extends Exception
@@ -17,22 +16,9 @@ package object ratelimit {
       maxTokens: Long,
       timeWindowInSec: Long
   )
-  private val clients: mutable.Map[Config, WeakReference[RedisClient]] =
+  private val clients: mutable.Map[Config, RedisClient] =
     mutable.Map.empty
 
-  private def getOrCreateAndUpdate(config: Config): RedisClient = {
-    val weakClient = clients.getOrElseUpdate(
-      config,
-      WeakReference(new RedisClient(config.host, config.port))
-    )
-    weakClient.get match {
-      case Some(client) => client
-      case None =>
-        val newClient = new RedisClient(config.host, config.port)
-        clients.update(config, WeakReference(newClient))
-        newClient
-    }
-  }
   private val lastResetTimeSuffix = ":rate_limit_last_reset"
   private val counterSuffix = ":rate_limit_counter"
   private val luaCode =
@@ -63,7 +49,7 @@ package object ratelimit {
       F: Sync[F]
   ): F[A] =
     F.delay(
-      getOrCreateAndUpdate(config)
+      clients.getOrElseUpdate(config, new RedisClient(config.host, config.port))
     ).flatMap(implicit client =>
       rateLimited(fa, key, config.maxTokens, config.timeWindowInSec)
     )

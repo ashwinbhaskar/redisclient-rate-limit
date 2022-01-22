@@ -19,10 +19,16 @@ publishTo := Some(
     Opts.resolver.sonatypeStaging
 )
 
-ThisBuild / scalaVersion     := "2.13.7"
-ThisBuild / version          := "2.0.0"
+val scalaVersion213 = "2.13.8"
+val scalaVersion212 = "2.12.15"
+val scalaVersion301 = "3.0.1"
+val supportedScalaVersions = List(scalaVersion213)
+ThisBuild / scalaVersion     := scalaVersion213
+ThisBuild / version          := "2.0.1"
 ThisBuild / organization     := "io.github.ashwinbhaskar"
 ThisBuild / organizationName := "redis.ratelimit"
+ThisBuild / crossScalaVersions := supportedScalaVersions
+
 
 lazy val root = (project in file("."))
   .settings(

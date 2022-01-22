@@ -4,7 +4,7 @@ A cats friendly and lightweight library that does rate limiting using token buck
 ## Importing
 Add the following to your `build.sbt`
 ```
-libraryDependencies =+ "io.github.ashwinbhaskar" %% "redis-rate-limit" % "2.0.0"
+libraryDependencies =+ "io.github.ashwinbhaskar" %% "redis-rate-limit" % "2.0.1"
 ```
 
 ## Usage
@@ -22,9 +22,9 @@ val port: Int = ???
 implicit val redisClient: RedisClient = new RedisClient(host, port) //pass your own instance of redis client implicitely
 val userId: String = ???
 
-val effectToBeRateLimited: IO[String] = ???
+val apiCall: IO[String] = ???
 
-val result: IO[String] = rateLimited[IO, String](effectToBeRateLimited, key = userId, maxTokens = 5, timeWindowInSec = 5)
+val result: IO[String] = rateLimited[IO, String](apiCall, key = userId, maxTokens = 5, timeWindowInSec = 5)
 
 //METHOD 2
 val redisHost: String = ???
@@ -32,9 +32,9 @@ val redisPort: Int = ???
 implicit val config = Config(redisHost, redisPort, maxTokens = 5, timeWindowInSec = 5)
 val userId: String = ???
 
-val effectToBeRateLimited: IO[String] = ???
+val apiCall: IO[String] = ???
 
-val result: IO[String] = rateLimited[IO, String](effectToBeRateLimited, key = userId) //internally creates a redis client for the implicit config and keeps it in memory as a weak reference
+val result: IO[String] = rateLimited[IO, String](apiCall, key = userId) //internally creates a redis client for the implicit config and keeps it in memory
 
 result.handleErrorWith {
     case RedisConnectionError(msg) => ??? 
