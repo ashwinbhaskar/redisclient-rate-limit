@@ -13,6 +13,7 @@ import org.scalatest.matchers.should.Matchers
 import scala.concurrent.duration.FiniteDuration
 import java.util.concurrent.TimeUnit
 import com.redis.ratelimit._
+import com.redis.common._
 
 class RateLimitSpec extends AnyFlatSpec {
 
