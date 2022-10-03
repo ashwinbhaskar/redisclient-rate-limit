@@ -33,7 +33,7 @@ package object ratelimit {
     for {
       nowInEpochSec <- F.delay(ZonedDateTime.now.toEpochSecond)
       remainingTokens <- F
-        .blocking(
+        .delay(
           redisClient.evalInt(
             luaCode,
             List.empty,
