@@ -5,7 +5,7 @@ val scalaVersion212 = "2.12.15"
 val scalaVersion301 = "3.0.1"
 val supportedScalaVersions = List(scalaVersion213)
 ThisBuild / scalaVersion := scalaVersion213
-ThisBuild / version := "3.0.0"
+ThisBuild / version := "4.0.0"
 ThisBuild / organization := "io.github.ashwinbhaskar"
 ThisBuild / organizationName := "redis.ratelimit"
 ThisBuild / crossScalaVersions := supportedScalaVersions
@@ -47,7 +47,7 @@ lazy val commonSettings = Seq(
       Opts.resolver.sonatypeStaging
   ),
   scalaVersion := scalaVersion213,
-  version := "3.0.0",
+  version := "4.0.0",
   organization := "io.github.ashwinbhaskar",
   organizationName := "redis.ratelimit",
   crossScalaVersions := supportedScalaVersions
@@ -60,7 +60,7 @@ lazy val common = (project in file("common"))
     libraryDependencies ++= Seq(
       L.redisClient
     )
-  )
+  ).settings(commonSettings)
 
 lazy val catsEffect = (project in file("cats-effect"))
   .settings(
