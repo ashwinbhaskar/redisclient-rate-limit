@@ -1,5 +1,5 @@
 # Redis Rate Limit ![build](https://github.com/ashwinbhaskar/redisclient-rate-limit/actions/workflows/scala.yml/badge.svg)
-A cats and zio friendly and lightweight library that does rate limiting using token bucket algorithm. The library executes the redis commands as `Lua` code which makes the operations atomic. The library internally creates and memoizes a redis client using [scala-redis](https://github.com/debasishg/scala-redis) if redis client is not provided.
+A cats and zio friendly lightweight library that rate limits using token bucket algorithm. The library executes redis commands as `Lua` code which makes the operations atomic. The library internally creates and memoizes a redis client using [scala-redis](https://github.com/debasishg/scala-redis) if redis client is not provided.
 
 ## Importing
 Add the following to your `build.sbt`
@@ -25,13 +25,17 @@ val apiCall: RIO[HttpClient, String] = ???
 val userId: String = ???
 
 //Externally provided Redis Client
-val result: RIO[HttpClient with RedisClient, String] = apiCall.withRateLimit(key = userId, maxTokens = 5, timeWindowInSec = 5)
+val redisClient = new RedisClient("localhost", 6379)
+
+val rateLimitedApiCall: RIO[HttpClient with RedisClient, String] = apiCall.withRateLimit(key = userId, maxTokens = 5, timeWindowInSec = 5)
+
 
 // Internally used Redis Client
 val redisHost: String = ???
 val redisPort: Int = ???
 val config = Config(redisHost, redisPort, maxTokens = 5, timeWindowInSec = 5)
-val result: RIO[HttpClient, String] = apiCall.withRateLimit(key = userId, config)
+
+val rateLimitedApiCall: RIO[HttpClient, String] = apiCall.withRateLimit(key = userId, config)
 
 ```
 
