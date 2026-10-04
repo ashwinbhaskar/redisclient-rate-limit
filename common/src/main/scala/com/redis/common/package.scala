@@ -1,8 +1,19 @@
 package com.redis
 
 package object common {
+
+  private[redis] def connectionError(e: Throwable): RedisConnectionError = {
+    val error = RedisConnectionError(e.getMessage)
+    error.initCause(e)
+    error
+  }
+
+  // Used by 4.0.x. Kept for binary compatibility; no longer used.
+  @deprecated("No longer used by the library", "4.1.0")
   val lastResetTimeSuffix = ":rate_limit_last_reset"
+  @deprecated("No longer used by the library", "4.1.0")
   val counterSuffix = ":rate_limit_counter"
+  @deprecated("No longer used by the library", "4.1.0")
   val luaCode =
     """
       -- ARGUMENTS IN ORDER - CurrentTimeStamp, WindowLength(in sec), LastUpdatedTimeStampKey, CounterKey, ThresholdValue

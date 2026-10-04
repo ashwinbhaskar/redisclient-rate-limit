@@ -259,6 +259,6 @@ object RateLimitSpec extends ZIOSpecDefault {
             Config("some-host", 6379, maxTokens = 40, timeWindowInSec = 10)
           )
         }
-      ) @@ TestAspect.sequential // 4.0 shares one non-thread-safe RedisClient per Config
+      )
     ).provideShared(redisLayer)
 }
