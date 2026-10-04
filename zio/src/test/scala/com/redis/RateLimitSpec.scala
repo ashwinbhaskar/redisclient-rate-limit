@@ -166,6 +166,76 @@ object RateLimitSpec extends ZIOSpecDefault {
           } yield v
 
           rateLimitedAssert(result, "foo")
+        },
+        test("should never deny steady traffic below the limit") {
+          val rateLimitedEffect = ZIO
+            .succeed("foo")
+            .withRateLimit(
+              key = uniqueKey("external-steady"),
+              maxTokens = 6,
+              timeWindowInSec = 5
+            )
+
+          // One call every 4s is far below 6 per 5s. 4.0 denied the 7th call,
+          // because every allowed call restarted the window.
+          val steady =
+            for {
+              _ <- TestClock.setTime(Instant.now())
+              results <- ZIO.foreach(1 to 10)(_ =>
+                rateLimitedEffect <* TestClock.adjust(4.seconds)
+              )
+            } yield results.toList
+
+          rateLimitedAssert(steady, List.fill(10)("foo"))
+        },
+        test("should allow exactly maxTokens of many concurrent calls") {
+          val rateLimitedEffect = ZIO
+            .succeed("foo")
+            .withRateLimit(
+              key = uniqueKey("external-concurrent"),
+              maxTokens = 50,
+              timeWindowInSec = 60
+            )
+
+          val counts =
+            for {
+              _ <- TestClock.setTime(Instant.now())
+              results <- ZIO.foreachPar(1 to 200)(_ => rateLimitedEffect.either)
+            } yield (
+              results.count(_.isRight),
+              results
+                .collect { case Left(e) => e }
+                .forall(_ == RateLimitExceeded)
+            )
+
+          rateLimitedAssert(counts, (50, true))
+        },
+        test("should expire its key one window after the last call") {
+          val key = uniqueKey("external-ttl")
+          val ttl =
+            for {
+              _ <- ZIO
+                .succeed("foo")
+                .withRateLimit(key, maxTokens = 5, timeWindowInSec = 60)
+              ttl <- ZIO.serviceWithZIO[RedisClient](client =>
+                ZIO.attemptBlocking(
+                  client.pttl(SlidingWindow.redisKey(key, 5, 60))
+                )
+              )
+            } yield ttl.exists(t => t > 0 && t <= 60000)
+
+          rateLimitedAssert(ttl, true)
+        },
+        test("should deny every call when maxTokens is 0") {
+          val rateLimitedEffect = ZIO
+            .succeed("foo")
+            .withRateLimit(
+              key = uniqueKey("external-zero-tokens"),
+              maxTokens = 0,
+              timeWindowInSec = 60
+            )
+
+          rateLimitedAssert(rateLimitedEffect, RateLimitExceeded)
         }
       ),
       suite("Internal Redis Client Rate Limit Spec")(
@@ -258,6 +328,42 @@ object RateLimitSpec extends ZIOSpecDefault {
             replicated,
             Config("some-host", 6379, maxTokens = 40, timeWindowInSec = 10)
           )
+        },
+        test("should allow exactly maxTokens of many concurrent calls") {
+          val counts =
+            for {
+              config <- ZIO.service[Config]
+              rateLimitedEffect = ZIO
+                .succeed("foo")
+                .withRateLimit(uniqueKey("internal-concurrent"), config)
+              _ <- TestClock.setTime(Instant.now())
+              results <- ZIO.foreachPar(1 to 200)(_ => rateLimitedEffect.either)
+            } yield (
+              results.count(_.isRight),
+              results
+                .collect { case Left(e) => e }
+                .forall(_ == RateLimitExceeded)
+            )
+
+          rateLimitedAssert(
+            counts,
+            (50, true),
+            Config("localhost", _, maxTokens = 50, timeWindowInSec = 60)
+          )
+        },
+        test("should keep the message and cause of a connection error") {
+          val config =
+            Config("localhost", 2342, maxTokens = 40, timeWindowInSec = 10)
+          ZIO
+            .succeed("foo")
+            .withRateLimit(uniqueKey("internal-error-cause"), config)
+            .flip
+            .map {
+              case e: RedisConnectionError =>
+                assertTrue(e.getMessage != null, e.getCause != null)
+              case other =>
+                assertNever(s"Expected RedisConnectionError, got $other")
+            }
         }
       )
     ).provideShared(redisLayer)

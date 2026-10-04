@@ -7,7 +7,7 @@ import com.redis.RedisClient
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import cats.implicits._
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import com.redis.ratelimit._
@@ -269,5 +269,164 @@ class RateLimitSpec extends AnyFlatSpec with BeforeAndAfterAll {
       case Left(th)                      => fail(th)
       case Right(value) => fail("Should be RedisConnectionError")
     }
+  }
+
+  "rateLimited" should "never deny steady traffic below the limit" in {
+    implicit val redisClient = new RedisClient(redisHost, redisPort)
+    val call = rateLimited[IO, String](
+      IO.pure("foo"),
+      key = uniqueKey("steady"),
+      maxTokens = 2,
+      timeWindowInSec = 1
+    )
+
+    // At most 2 calls fall in any 1s window. 4.0 denied the third call,
+    // because every allowed call restarted the window.
+    val results =
+      (call.attempt <* IO.sleep(600.millis)).replicateA(6).unsafeRunSync()
+
+    assert(results.forall(_ == Right("foo")), results)
+  }
+
+  "rateLimited with config" should "allow exactly maxTokens of many concurrent calls" in {
+    implicit val config =
+      Config(redisHost, redisPort, maxTokens = 50, timeWindowInSec = 60)
+    val call = rateLimited[IO, String](
+      IO.pure("foo"),
+      key = uniqueKey("concurrent-config")
+    )
+
+    val results = List.fill(200)(call.attempt).parSequence.unsafeRunSync()
+
+    assert(results.count(_.isRight) == 50)
+    assert(results.collect { case Left(e) => e }.forall(_ == RateLimitExceeded))
+  }
+
+  "rateLimited" should "allow exactly maxTokens of many concurrent calls on a shared client" in {
+    implicit val redisClient = new RedisClient(redisHost, redisPort)
+    val call = rateLimited[IO, String](
+      IO.pure("foo"),
+      key = uniqueKey("concurrent-shared"),
+      maxTokens = 50,
+      timeWindowInSec = 60
+    )
+
+    val results = List.fill(200)(call.attempt).parSequence.unsafeRunSync()
+
+    assert(results.count(_.isRight) == 50)
+    assert(results.collect { case Left(e) => e }.forall(_ == RateLimitExceeded))
+  }
+
+  "rateLimited" should "expire its key one window after the last call" in {
+    implicit val redisClient = new RedisClient(redisHost, redisPort)
+    val key = uniqueKey("ttl")
+
+    rateLimited[IO, String](
+      IO.pure("foo"),
+      key,
+      maxTokens = 5,
+      timeWindowInSec = 60
+    )
+      .unsafeRunSync()
+
+    val ttl = redisClient.pttl(SlidingWindow.redisKey(key, 5, 60))
+    assert(ttl.exists(t => t > 0 && t <= 60000), ttl)
+  }
+
+  "rateLimited" should "keep different limits on the same key independent" in {
+    implicit val redisClient = new RedisClient(redisHost, redisPort)
+    val key = uniqueKey("independent")
+    val strict = rateLimited[IO, String](
+      IO.pure("foo"),
+      key,
+      maxTokens = 2,
+      timeWindowInSec = 60
+    )
+    val loose = rateLimited[IO, String](
+      IO.pure("foo"),
+      key,
+      maxTokens = 5,
+      timeWindowInSec = 60
+    )
+
+    val (strictResults, looseResults) =
+      (strict.attempt.replicateA(3), loose.attempt.replicateA(5)).tupled
+        .unsafeRunSync()
+
+    assert(strictResults.count(_.isRight) == 2)
+    assert(looseResults.forall(_.isRight), looseResults)
+  }
+
+  "rateLimited" should "recover when Redis has lost the cached script" in {
+    implicit val redisClient = new RedisClient(redisHost, redisPort)
+    val call = rateLimited[IO, String](
+      IO.pure("foo"),
+      key = uniqueKey("noscript"),
+      maxTokens = 5,
+      timeWindowInSec = 60
+    )
+
+    call.unsafeRunSync()
+    redisClient.scriptFlush
+
+    assert(call.attempt.unsafeRunSync() == Right("foo"))
+  }
+
+  "rateLimited" should "keep the message and cause of a connection error" in {
+    implicit val redisClient = new RedisClient("localhost", 2342)
+    val result = rateLimited[IO, String](
+      IO.pure("foo"),
+      key = uniqueKey("error-cause"),
+      maxTokens = 5,
+      timeWindowInSec = 60
+    ).attempt.unsafeRunSync()
+
+    result match {
+      case Left(e: RedisConnectionError) =>
+        assert(e.getMessage != null)
+        assert(e.getCause != null)
+      case other => fail(s"Expected RedisConnectionError, got $other")
+    }
+  }
+
+  "rateLimited" should "deny every call when maxTokens is 0" in {
+    implicit val redisClient = new RedisClient(redisHost, redisPort)
+    val result = rateLimited[IO, String](
+      IO.pure("foo"),
+      key = uniqueKey("zero-tokens"),
+      maxTokens = 0,
+      timeWindowInSec = 60
+    ).attempt.unsafeRunSync()
+
+    assert(result == Left(RateLimitExceeded))
+  }
+
+  "rateLimited" should "reject a time window that isn't positive" in {
+    implicit val redisClient = new RedisClient(redisHost, redisPort)
+    val result = rateLimited[IO, String](
+      IO.pure("foo"),
+      key = uniqueKey("zero-window"),
+      maxTokens = 5,
+      timeWindowInSec = 0
+    ).attempt.unsafeRunSync()
+
+    assert(result.left.exists(_.isInstanceOf[IllegalArgumentException]), result)
+  }
+
+  "the rate limit script" should "count a re-sent call only once" in {
+    val client = new RedisClient(redisHost, redisPort)
+    val key = uniqueKey("idempotent")
+    val now = System.currentTimeMillis()
+
+    // scala-redis re-sends a command after a dropped connection; the script
+    // may already have run for that member.
+    val first = ScriptRunner.run(client, key, 1, 60, now, "member-1")
+    val resent = ScriptRunner.run(client, key, 1, 60, now, "member-1")
+    val other = ScriptRunner.run(client, key, 1, 60, now, "member-2")
+
+    assert(first.allowed && first.remaining == 0)
+    assert(resent.allowed)
+    assert(!other.allowed)
+    assert(other.retryAfterMs > 0 && other.retryAfterMs <= 60000)
   }
 }
