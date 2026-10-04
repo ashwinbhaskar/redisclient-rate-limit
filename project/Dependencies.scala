@@ -29,4 +29,9 @@ object Dependencies {
     val zioTest = "dev.zio" %% "zio-test" % V.zio % Test
     val zioTestSbt = "dev.zio" %% "zio-test-sbt" % V.zio % Test
   }
+
+  object B { // Benchmark dependencies (bench is not published)
+    val testContainer =
+      "com.dimafeng" %% "testcontainers-scala-core" % V.testcontainersScalaVersion
+  }
 }

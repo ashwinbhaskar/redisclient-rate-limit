@@ -38,7 +38,7 @@ lazy val root = (project in file("."))
     publish / skip := true,
     mimaPreviousArtifacts := Set.empty
   )
-  .aggregate(common, catsEffect, zio)
+  .aggregate(common, catsEffect, zio, bench)
 
 lazy val common = (project in file("common"))
   .settings(
@@ -74,3 +74,16 @@ lazy val zio = (project in file("zio"))
   )
   .settings(mimaSettings)
   .dependsOn(common)
+
+// Not published. Run with `sbt bench/run`; see Bench.scala.
+lazy val bench = (project in file("bench"))
+  .settings(
+    name := "redis-rate-limit-bench",
+    publish / skip := true,
+    mimaPreviousArtifacts := Set.empty,
+    fork := true,
+    libraryDependencies ++= Seq(L.zio, B.testContainer)
+  )
+  // Not the zio module: both effect modules define com.redis.ratelimit, so
+  // only one of them can be on a classpath.
+  .dependsOn(catsEffect)
