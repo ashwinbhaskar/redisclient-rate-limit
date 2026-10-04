@@ -17,9 +17,21 @@ jobs:
           java-version: '17'
           cache: sbt
       - uses: sbt/setup-sbt@v1
-      - run: sbt ci-release
+      - name: Publish to Maven Central
         env:
-          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-          PGP_SECRET: ${{ secrets.PGP_SECRET }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          # Sonatype Central Portal user token (not the account login).
+          SONATYPE_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          PGP_PASSPHRASE: ${{ secrets.SIGNING_PASSWORD }}
+        run: |
+          # sbt-ci-release imports PGP_SECRET with `base64 --decode | gpg --import`.
+          # Accept SIGNING_KEY either as an ASCII-armored key or already base64-encoded.
+          if printf '%s' "$SIGNING_KEY" | grep -q -- '-----BEGIN PGP PRIVATE KEY BLOCK-----'; then
+            PGP_SECRET=$(printf '%s\n' "$SIGNING_KEY" | base64 -w0)
+          else
+            PGP_SECRET=$(printf '%s' "$SIGNING_KEY" | tr -d ' \r\n')
+          fi
+          echo "::add-mask::$PGP_SECRET"
+          export PGP_SECRET
+          sbt ci-release
