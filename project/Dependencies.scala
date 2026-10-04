@@ -5,16 +5,12 @@ object Dependencies {
     // Scala
 
     val redisClient = "3.41"
-    val catsEffect = "3.3.4"
-    val zio = "2.0.2"
+    val catsEffect = "3.7.1"
+    val zio = "2.1.26"
 
     // Test
-    val testcontainersScalaVersion = "0.39.12"
-    val scalaTest = "3.2.7"
-
-    // Compiler
-    val betterMonadicFor = "0.3.1"
-    val kindProjector = "0.13.2"
+    val testcontainersScalaVersion = "0.44.1"
+    val scalaTest = "3.2.20"
   }
 
   object L { // Libraries

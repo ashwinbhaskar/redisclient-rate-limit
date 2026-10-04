@@ -4,6 +4,7 @@ import scala.collection.mutable
 import java.time.ZonedDateTime
 import zio._
 import com.redis.common._
+import com.redis.common.Config
 import java.util.concurrent.TimeUnit
 
 package object ratelimit {
@@ -48,7 +49,9 @@ package object ratelimit {
     val counterKey = key ++ counterSuffix
     for {
       redisClient <- ZIO.service[RedisClient]
-      nowInEpochSec <- Clock.currentTime(TimeUnit.SECONDS) // ZIO.succeed(ZonedDateTime.now.toEpochSecond)
+      nowInEpochSec <- Clock.currentTime(
+        TimeUnit.SECONDS
+      ) // ZIO.succeed(ZonedDateTime.now.toEpochSecond)
       remainingTokens <- ZIO
         .attempt(
           redisClient.evalInt(
